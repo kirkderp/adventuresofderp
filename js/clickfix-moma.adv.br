@@ -1,6 +1,4 @@
 /*
- * Readable reconstruction of the supplied obfuscated script.
- *
  * WARNING:
  * This version preserves the original network and eval behavior. Running it in
  * a browser will contact the embedded server and may execute JavaScript
