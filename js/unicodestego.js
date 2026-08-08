@@ -10,6 +10,8 @@
   *  Base64-decoding that yields 12 colon characters followed by 65 bytes of binary data. 
   *  The binary portion is not directly readable and appears encrypted or otherwise opaque.
   *
+  *  Unicode Stego (Zero-width): https://330k.github.io/misc_tools/unicode_steganography.html
+  *
   */
 
 <svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="840" height="300" version="1.1">
