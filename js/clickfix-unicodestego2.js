@@ -6,7 +6,7 @@
   *  U+2061
   *  U+2062
   *
-  *  sporium[.]net
+  *  kendalllaw[.]net
   *  |
   *  +-- Inline WASM/SVG loader
   *       |
